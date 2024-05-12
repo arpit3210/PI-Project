@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Pi Network Example</title>
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <script>Pi.init({ version: "2.0" })</script>
+  </head>
+  <body>
+    <h1>Pi Network Example</h1>
+    <button id="authenticate">Authenticate</button>
+    <button id="paymentBtn" disabled>Pay 1 Pi to 0x123...</button>
+    <script>
+      // Initialize the SDK
+      Pi.init({ version: "2.0" });
+
+
+      
+   // Read more about this callback in the SDK reference:
+   function onIncompletePaymentFound(payment) { 
+        paymentId = payment.identifier
+        txid = payment.transaction.txid
+        $.post('/payment/complete',
+                {
+                    paymentId: paymentId,
+                    txid: txid,
+                    debug: 'cancel'
+                }
+            )
+    };
+
+      // Authentication
+      const authenticateBtn = document.getElementById("authenticate");
+      authenticateBtn.addEventListener("click", () => {
+        const scopes = ["payments"];
+        Pi.authenticate(scopes, onIncompletePaymentFound)
+          .then((auth) => {
+            console.log("Authentication successful");
+            document.getElementById("paymentBtn").disabled = false;
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+      });
+
+      // Request Payment
+      const paymentBtn = document.getElementById("paymentBtn");
+      paymentBtn.addEventListener("click", () => {
+        const address = "0x123..."; // Replace with the desired address
+        const amount = 1;
+        const memo = "Payment Example";
+
+        Pi.createPayment(
+          {
+            amount,
+            memo,
+          },
+          {
+            onReadyForServerApproval: (paymentId) => {
+              console.log(`Payment ${paymentId} ready for server approval`);
+              // Implement server-side approval logic here
+              onReadyForServerCompletion(paymentId, "txid123");
+            },
+            onReadyForServerCompletion: (paymentId, txid) => {
+              console.log(`Payment ${paymentId} completed with txid ${txid}`);
+              // Implement server-side completion logic here
+            },
+            onCancel: (paymentId) => {
+              console.log(`Payment ${paymentId} canceled`);
+            },
+            onError: (error, payment) => {
+              console.error(error, payment);
+            },
+          }
+        );
+      });
+
+    </script>
+  </body>
+</html>
